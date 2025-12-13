@@ -257,13 +257,6 @@ A: 当前版本不支持，可以在应用层手动处理特殊字段。
 ### Q: 生成的代码在哪里？
 A: 在 `target/generated-sources/annotations/` 目录下。
 
-## 文档
-
-- [参考文档](docs/REFERENCE.md) - 完整的参考文档（MapStruct 格式）
-- [快速入门指南](docs/GETTING_STARTED.md) - 5 分钟快速开始
-- [API 文档](docs/API.md) - 详细的 API 文档
-- [常见问题解答](docs/FAQ.md) - 常见问题和解答
-- [项目总结](docs/PROJECT_SUMMARY.md) - 项目完成情况总结
 
 ## 许可证
 
@@ -272,9 +265,3 @@ Apache License 2.0
 ## 作者
 
 jackieonway
-
-## 获取帮助
-
-- 查看 [常见问题解答](docs/FAQ.md)
-- 在 [GitHub Issues](https://github.com/jackieonway/fast-bean-copier/issues) 中提出问题
-- 查看 [示例代码](fast-bean-copier-examples) 了解更多用法
