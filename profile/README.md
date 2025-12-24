@@ -2,6 +2,8 @@
 
 Fast Bean Copier 是一个高性能的 Java Bean 拷贝工具，使用 APT（注解处理工具）在编译期自动生成拷贝代码，实现零运行时开销。
 
+> v1.1 新特性：集合/数组字段深拷贝（含嵌套组合、多维数组）与反向拷贝；raw/无界通配符集合自动降级浅拷贝并输出编译期警告。
+
 ## 特性
 
 - ✅ **编译期代码生成** - 使用 APT 在编译期生成拷贝代码，零运行时反射
@@ -9,7 +11,7 @@ Fast Bean Copier 是一个高性能的 Java Bean 拷贝工具，使用 APT（注
 - ✅ **高性能** - 生成的代码直接调用 getter/setter，性能最优
 - ✅ **易用** - 只需添加 `@CopyTarget` 注解即可
 - ✅ **灵活** - 支持字段忽略、类型转换、集合处理
-- ✅ **完整** - 支持双向拷贝、集合拷贝、嵌套对象
+- ✅ **完整** - 支持双向拷贝、集合/Map/数组拷贝、嵌套对象
 
 ## 快速开始
 
@@ -20,14 +22,14 @@ Fast Bean Copier 是一个高性能的 Java Bean 拷贝工具，使用 APT（注
 <dependency>
     <groupId>com.github.jackieonway</groupId>
     <artifactId>fast-bean-copier-annotations</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 
 <!-- 处理器模块（编译时依赖） -->
 <dependency>
     <groupId>com.github.jackieonway</groupId>
     <artifactId>fast-bean-copier-processor</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -129,25 +131,26 @@ User user = UserDtoCopier.fromDto(userDto);
 // 如果 userDto.age 为 null，则 user.age 为 0
 ```
 
-### 集合拷贝
+### 集合/Map/数组拷贝（含反向）
 
-支持 List 和 Set 的拷贝：
+支持 List、Set、Map、数组及嵌套组合：
 
 ```java
-// 转换为 DTO 列表
 List<UserDto> dtos = UserDtoCopier.toDtoList(users);
-
-// 转换为 DTO 集合
 Set<UserDto> dtoSet = UserDtoCopier.toDtoSet(users);
+Map<String, UserDto> dtoMap = UserDtoCopier.toDtoMap(userMap);
+UserDto[] dtoArr = UserDtoCopier.toDtoArray(userArr);
 
-// 反向转换
+// 反向
 List<User> users = UserDtoCopier.fromDtoList(dtos);
 Set<User> userSet = UserDtoCopier.fromDtoSet(dtoSet);
+Map<String, User> usersMap = UserDtoCopier.fromDtoMap(dtoMap);
+User[] restoredArr = UserDtoCopier.fromDtoArray(dtoArr);
 ```
 
-### Null 值处理
+### Null 与通配符处理
 
-所有方法都支持 null 值处理：
+所有方法都支持 null 值处理，集合/Map/数组中的 null 元素会被保留。对 raw/无界通配符集合，会降级为浅拷贝并给出编译期警告，建议为集合声明明确泛型。
 
 ```java
 // 传入 null 返回 null
@@ -257,6 +260,9 @@ A: 当前版本不支持，可以在应用层手动处理特殊字段。
 ### Q: 生成的代码在哪里？
 A: 在 `target/generated-sources/annotations/` 目录下。
 
+## 文档
+
+- [官方文档](https://fast-bean-copier.github.io/)
 
 ## 许可证
 
@@ -265,3 +271,7 @@ Apache License 2.0
 ## 作者
 
 jackieonway
+
+## 获取帮助
+
+- 在 [GitHub Issues](https://github.com/fast-bean-copier/fast-bean-copier/issues) 中提出问题
