@@ -186,5 +186,5 @@ jackieonway
 
 ## 获取帮助
 
-- 查看 [常见问题解答](https://fast-bean-copier.github.io/faq.html))
+- 查看 [常见问题解答](https://fast-bean-copier.github.io/faq.html)
 - 在 [GitHub Issues](https://github.com/jackieonway/fast-bean-copier/issues) 中提出问题
