@@ -2,6 +2,10 @@
 
 Fast Bean Copier 是一个高性能的 Java Bean 拷贝工具，使用 APT（注解处理工具）在编译期自动生成拷贝代码，实现零运行时开销。
 
+> **v1.3 新特性**：更新现有对象（updateDto/updateEntity）、映射前回调、条件映射、默认值和常量、全局配置（@CopyTargetConfig）。
+>
+> **v1.2.1 重构**：处理器架构重构，BeanCopierProcessor 和 CodeGenerator 拆分为多个职责单一的组件，代码可维护性显著提升。
+>
 > **v1.2 新特性**：多字段映射（多对一、一对多）、TypeConverter 类型转换器、依赖注入支持（Spring/CDI/JSR-330）、函数式定制拷贝。
 
 ## 特性
@@ -12,10 +16,15 @@ Fast Bean Copier 是一个高性能的 Java Bean 拷贝工具，使用 APT（注
 - ✅ **易用** - 只需添加 `@CopyTarget` 注解即可
 - ✅ **灵活** - 支持字段忽略、类型转换、集合处理
 - ✅ **完整** - 支持双向拷贝、集合/Map/数组拷贝、嵌套对象
-- 🆕 **多字段映射** - 支持多对一、一对多字段映射和表达式
-- 🆕 **类型转换器** - 内置数字、日期、枚举等转换器，支持自定义转换器
-- 🆕 **依赖注入** - 支持 Spring、CDI、JSR-330 等依赖注入框架
-- 🆕 **函数式定制** - 支持函数式后处理定制拷贝结果
+- ✅ **多字段映射** - 支持多对一、一对多字段映射和表达式
+- ✅ **类型转换器** - 内置数字、日期、枚举等转换器，支持自定义转换器
+- ✅ **依赖注入** - 支持 Spring、CDI、JSR-330 等依赖注入框架
+- ✅ **函数式定制** - 支持函数式后处理定制拷贝结果
+- 🆕 **更新现有对象** - 支持 updateDto/updateEntity 方法更新已存在的对象
+- 🆕 **映射前回调** - 支持在映射前执行验证、初始化等自定义逻辑
+- 🆕 **条件映射** - 支持基于条件决定是否映射字段
+- 🆕 **默认值和常量** - 支持设置字段的默认值和常量值
+- 🆕 **全局配置** - 支持包级别配置，减少重复配置
 
 ## 快速开始
 
@@ -25,13 +34,13 @@ Fast Bean Copier 是一个高性能的 Java Bean 拷贝工具，使用 APT（注
 <dependency>
     <groupId>com.github.jackieonway</groupId>
     <artifactId>fast-bean-copier-annotations</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
 </dependency>
 
 <dependency>
     <groupId>com.github.jackieonway</groupId>
     <artifactId>fast-bean-copier-processor</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -150,6 +159,93 @@ UserDto dto = UserDtoCopier.toDto(user, result -> {
     result.setDisplayName(result.getName().toUpperCase());
     return result;
 });
+```
+
+## v1.3 新功能
+
+### 更新现有对象
+
+```java
+// 更新已存在的 DTO 对象
+UserDto existingDto = new UserDto();
+existingDto.setName("原始名称");
+UserDtoCopier.updateDto(existingDto, user);
+
+// 更新已存在的实体对象
+User existingUser = new User();
+UserDtoCopier.updateEntity(existingUser, userDto);
+```
+
+### 映射前回调
+
+```java
+@CopyTarget(source = User.class, beforeMapping = "validateAndPrepare")
+public class UserDto {
+    private String name;
+    
+    // 映射前处理方法
+    default void validateAndPrepare(User source) {
+        if (source.getName() == null) {
+            throw new IllegalArgumentException("Name cannot be null");
+        }
+    }
+}
+```
+
+### 条件映射
+
+```java
+@CopyTarget(source = User.class)
+public class UserDto {
+    // 仅当源字段不为 null 时才映射
+    @CopyField(condition = "java(source.getName() != null)")
+    private String name;
+    
+    // 仅当年龄大于 18 时才映射
+    @CopyField(condition = "java(source.getAge() > 18)")
+    private Integer age;
+}
+```
+
+### 默认值和常量
+
+```java
+@CopyTarget(source = User.class)
+public class UserDto {
+    // 当源字段为 null 时使用默认值
+    @CopyField(defaultValue = "未知")
+    private String name;
+    
+    @CopyField(defaultValue = "0")
+    private Integer count;
+    
+    // 设置常量值，不依赖源字段
+    @CopyField(constant = "SYSTEM")
+    private String createdBy;
+}
+```
+
+### 全局配置（包级别）
+
+```java
+// package-info.java
+@CopyTargetConfig(
+    componentModel = ComponentModel.SPRING,
+    nullValueStrategy = NullValueStrategy.IGNORE
+)
+package com.example.dto;
+
+import com.github.jackieonway.copier.annotation.*;
+```
+
+### Null 值处理策略
+
+```java
+// IGNORE 策略：只更新非 null 字段（默认）
+// REPLACE 策略：更新所有字段，包括 null 值
+
+@CopyTargetConfig(nullValueStrategy = NullValueStrategy.REPLACE)
+package com.example.dto;
 ```
 
 ## 内置 TypeConverter
