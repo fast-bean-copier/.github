@@ -2,6 +2,10 @@
 
 Fast Bean Copier 是一个高性能的 Java Bean 拷贝工具，使用 APT（注解处理工具）在编译期自动生成拷贝代码，实现零运行时开销。
 
+> **v1.3.2 新特性**：嵌套对象深拷贝支持（自动深拷贝不同类型的嵌套对象、无限层级嵌套、混合模式支持）。
+>
+> **v1.3.1 新特性**：统一所有集合类型的 UnaryOperator 行为（List/Set/Map/Array）、Properties 配置文件支持、逆向转换特殊字段自动跳过。
+>
 > **v1.3 新特性**：更新现有对象（updateDto/updateEntity）、映射前回调、条件映射、默认值和常量、全局配置（@CopyTargetConfig）。
 >
 > **v1.2.1 重构**：处理器架构重构，BeanCopierProcessor 和 CodeGenerator 拆分为多个职责单一的组件，代码可维护性显著提升。
@@ -15,16 +19,20 @@ Fast Bean Copier 是一个高性能的 Java Bean 拷贝工具，使用 APT（注
 - ✅ **高性能** - 生成的代码直接调用 getter/setter，性能最优
 - ✅ **易用** - 只需添加 `@CopyTarget` 注解即可
 - ✅ **灵活** - 支持字段忽略、类型转换、集合处理
-- ✅ **完整** - 支持双向拷贝、集合/Map/数组拷贝、嵌套对象
+- ✅ **完整** - 支持双向拷贝、集合/Map/数组拷贝、嵌套对象深拷贝
 - ✅ **多字段映射** - 支持多对一、一对多字段映射和表达式
 - ✅ **类型转换器** - 内置数字、日期、枚举等转换器，支持自定义转换器
 - ✅ **依赖注入** - 支持 Spring、CDI、JSR-330 等依赖注入框架
 - ✅ **函数式定制** - 支持函数式后处理定制拷贝结果
-- 🆕 **更新现有对象** - 支持 updateDto/updateEntity 方法更新已存在的对象
-- 🆕 **映射前回调** - 支持在映射前执行验证、初始化等自定义逻辑
-- 🆕 **条件映射** - 支持基于条件决定是否映射字段
-- 🆕 **默认值和常量** - 支持设置字段的默认值和常量值
-- 🆕 **全局配置** - 支持包级别配置，减少重复配置
+- ✅ **更新现有对象** - 支持 updateDto/updateEntity 方法更新已存在的对象
+- ✅ **映射前回调** - 支持在映射前执行验证、初始化等自定义逻辑
+- ✅ **条件映射** - 支持基于条件决定是否映射字段
+- ✅ **默认值和常量** - 支持设置字段的默认值和常量值
+- ✅ **全局配置** - 支持包级别配置，减少重复配置
+- 🆕 **嵌套对象深拷贝**（v1.3.2）- 自动深拷贝不同类型的嵌套对象，支持无限层级和混合模式
+- 🆕 **统一集合定制**（v1.3.1）- 所有集合类型（List/Set/Map/Array）使用一致的 UnaryOperator 行为
+- 🆕 **配置文件支持**（v1.3.1）- 支持通过 Properties 文件进行全局配置
+- 🆕 **智能逆向转换**（v1.3.1）- 自动跳过不可逆的特殊字段映射
 
 ## 快速开始
 
@@ -34,13 +42,13 @@ Fast Bean Copier 是一个高性能的 Java Bean 拷贝工具，使用 APT（注
 <dependency>
     <groupId>com.github.jackieonway</groupId>
     <artifactId>fast-bean-copier-annotations</artifactId>
-    <version>1.3.0</version>
+    <version>1.3.2</version>
 </dependency>
 
 <dependency>
     <groupId>com.github.jackieonway</groupId>
     <artifactId>fast-bean-copier-processor</artifactId>
-    <version>1.3.0</version>
+    <version>1.3.2</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -84,7 +92,7 @@ List<UserDto> userDtos = UserDtoCopier.toDtoList(users);
 @CopyTarget(source = Person.class)
 public class PersonDto {
     @CopyField(source = {"firstName", "lastName"}, 
-               expression = "source.getFirstName() + \" \" + source.getLastName()")
+               expression = "java(source.getFirstName() + \" \" + source.getLastName())")
     private String fullName;
 }
 ```
@@ -95,11 +103,11 @@ public class PersonDto {
 @CopyTarget(source = FullNameSource.class)
 public class NameDto {
     @CopyField(source = "fullName", 
-               expression = "source.getFullName().split(\" \")[0]")
+               expression = "java(source.getFullName().split(\" \")[0])")
     private String firstName;
     
     @CopyField(source = "fullName", 
-               expression = "source.getFullName().split(\" \")[1]")
+               expression = "java(source.getFullName().split(\" \")[1])")
     private String lastName;
 }
 ```
@@ -159,6 +167,115 @@ UserDto dto = UserDtoCopier.toDto(user, result -> {
     result.setDisplayName(result.getName().toUpperCase());
     return result;
 });
+```
+
+## v1.3.1 新功能
+
+### 统一 UnaryOperator 行为（重要变更）
+
+v1.3.1 统一了所有集合类型的 UnaryOperator 行为，现在所有 customizer 都操作整个集合，提供一致且强大的定制能力：
+
+**统一后的类型签名：**
+- List: `UnaryOperator<List<T>>`
+- Set: `UnaryOperator<Set<T>>`
+- Map: `UnaryOperator<Map<K, T>>`
+- Array: `UnaryOperator<T[]>`
+
+**好处：**
+- ✅ 一致的 API 设计，更容易理解和使用
+- ✅ 更强大的灵活性：支持过滤、排序、限制、替换实现等操作
+- ✅ 更直观：方法返回 `List<T>`，customizer 就操作 `List<T>`
+
+```java
+// List 过滤和排序
+List<UserDto> result = UserDtoCopier.toDtoList(users, list -> 
+    list.stream()
+        .filter(dto -> dto.getPrice() >= 100)
+        .sorted(Comparator.comparing(UserDto::getName))
+        .limit(10)
+        .collect(Collectors.toList())
+);
+
+// Set 转换为不可变集合
+Set<UserDto> immutableSet = UserDtoCopier.toDtoSet(userSet, 
+    Collections::unmodifiableSet);
+
+// 如果需要修改每个元素，在 customizer 中遍历
+List<UserDto> modified = UserDtoCopier.toDtoList(users, list -> {
+    list.forEach(dto -> dto.setSource("batch"));
+    return list;
+});
+```
+
+### Map/Array UnaryOperator 重载（v1.3.1 新增）
+
+新增 Map 和 Array 批量转换的 UnaryOperator 重载：
+
+```java
+// Map 过滤：移除 id 为 null 的条目
+Map<String, UserDto> filteredMap = UserDtoCopier.toDtoMap(userMap, result -> {
+    result.entrySet().removeIf(entry -> entry.getValue().getId() == null);
+    return result;
+});
+
+// Map 转换为不可变集合
+Map<String, UserDto> immutableMap = UserDtoCopier.toDtoMap(userMap, 
+    Collections::unmodifiableMap);
+
+// Array 过滤：移除 id 为 null 的元素
+UserDto[] filteredArray = UserDtoCopier.toDtoArray(users, result -> 
+    Arrays.stream(result)
+        .filter(dto -> dto.getId() != null)
+        .toArray(UserDto[]::new));
+
+// Array 排序
+UserDto[] sortedArray = UserDtoCopier.toDtoArray(users, result -> {
+    Arrays.sort(result, Comparator.comparing(UserDto::getName));
+    return result;
+});
+```
+
+### Properties 配置文件支持
+
+支持通过 `fast-bean-copier.properties` 文件进行全局配置，减少重复配置：
+
+```properties
+# 在 src/main/resources/fast-bean-copier.properties 中配置
+fast.bean.copier.componentModel=SPRING
+fast.bean.copier.nullValueStrategy=IGNORE
+```
+
+配置优先级：类级别 > 包级别 > 配置文件 > 默认值
+
+```java
+// 类级别配置优先级最高
+@CopyTarget(source = User.class, componentModel = ComponentModel.DEFAULT)
+public class UserDto { }
+
+// 未配置时使用配置文件中的设置
+@CopyTarget(source = Product.class)
+public class ProductDto { }  // 使用配置文件中的 SPRING 模式
+```
+
+### 逆向转换智能跳过
+
+在 `fromDto/updateEntity` 方法中自动跳过使用了特殊映射配置的字段，避免逆向转换错误：
+
+```java
+@CopyTarget(source = User.class)
+public class UserDto {
+    // 使用类型转换器的字段在逆向转换时自动跳过
+    @CopyField(converter = DateFormatter.class, format = "yyyy-MM-dd")
+    private String createTimeText;
+    
+    // 使用表达式的字段在逆向转换时自动跳过
+    @CopyField(source = {"firstName", "lastName"}, 
+               expression = "java(source.getFirstName() + \" \" + source.getLastName())")
+    private String fullName;
+}
+
+// 生成的 fromDto 方法会自动跳过这些字段并添加注释
+// 注释格式：// 类型转换器映射 'createTimeText' 不可逆，在 fromDto() 中跳过
 ```
 
 ## v1.3 新功能
